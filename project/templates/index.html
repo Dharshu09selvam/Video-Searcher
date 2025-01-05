@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Video Searcher</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f6f9fc 0%, #eef2f7 100%);
+        }
+
+        .fade-in {
+            animation: fadeIn 1.2s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ffffff 0%, #f6f9fc 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+        }
+
+        .loader-text {
+            margin-top: 1rem;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loader-hidden {
+            display: none;
+        }
+
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .search-input {
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            transform: translateY(-2px);
+        }
+
+        .video-title {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .download-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: max-content;
+            z-index: 10;
+        }
+
+        .download-btn:hover .download-tooltip {
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen text-gray-800">
+    <!-- Loader -->
+    <div class="loader-container" id="loader">
+        <div class="loader"></div>
+        <p class="loader-text">Loading amazing videos...</p>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header Section -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-4xl font-bold text-indigo-600 mb-4">
+                <i class="fab fa-youtube text-red-500 mr-2"></i>
+                Video Searcher
+            </h1>
+            <p class="text-lg text-gray-600 max-w-2xl mx-auto">Discover the perfect videos for your interests</p>
+            
+            <form method="POST" action="/" class="mt-8 max-w-3xl mx-auto bg-white p-4 rounded-xl shadow-lg">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            <input type="text" name="topic" placeholder="What would you like to watch?" 
+                                class="search-input w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" required>
+                        </div>
+                    </div>
+                    <div class="md:w-36">
+                        <div class="relative">
+                            <i class="fas fa-globe absolute left-3 top-3 text-gray-400"></i>
+                            <input type="text" name="language" placeholder="Lang (en)" 
+                                class="search-input w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" value="en">
+                        </div>
+                    </div>
+                    <button type="submit" 
+                        class="bg-indigo-600 text-white px-6 py-2 rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-300 flex items-center justify-center">
+                        <i class="fas fa-search mr-2"></i>
+                        Search
+                    </button>
+                </div>
+            </form>
+        </header>
+
+        {% if videos %}
+        <!-- Featured Videos Section -->
+        <section class="mb-8 fade-in">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-star text-yellow-500 mr-2"></i>
+                Featured Videos
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% for video in videos[:2] %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-hover">
+                    <div class="flex items-center">
+                        <img src="{{ video.thumbnail }}" alt="{{ video.title }}" 
+                            class="w-32 h-24 object-cover">
+                        <div class="flex-1 p-3">
+                            <h3 class="text-sm font-semibold text-gray-800 mb-2 video-title">{{ video.title }}</h3>
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-600">
+                                    <i class="fas fa-thumbs-up text-indigo-500 mr-1"></i>
+                                    {{ video.like_count }}
+                                </span>
+                                <div class="flex gap-2">
+                                    <a href="{{ video.url }}" target="_blank" 
+                                        class="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700 transition-colors duration-300">
+                                        Watch
+                                    </a>
+                                    <div class="relative download-btn">
+                                        <form action="{{ url_for('download_video', video_id=video.video_id) }}" method="POST" class="inline">
+                                            <button type="submit" 
+                                                class="text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors duration-300"
+                                                onclick="startDownload(this)">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        </form>
+                                        <div class="download-tooltip">
+                                            <p class="text-xs mb-2">Click to download or use youtube-dl:</p>
+                                            <code class="text-xs bg-gray-100 p-1 rounded block mb-2">{{ video.download_link }}</code>
+                                            <a href="https://youtube-dl.org/" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800">Get youtube-dl</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- All Videos Grid -->
+        <section class="fade-in">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-film text-indigo-500 mr-2"></i>
+                All Videos
+            </h2>
+ <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {% for video in videos[2:] %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-hover">
+                    <div class="relative">
+                        <img src="{{ video.thumbnail }}" alt="{{ video.title }}" 
+                            class="w-full h-28 object-cover">
+                        <div class="absolute top-1 right-1 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
+                            <i class="fas fa-thumbs-up text-xs mr-1"></i>
+                            {{ video.like_count }}
+                        </div>
+                    </div>
+                    <div class="p-2">
+                        <h3 class="text-xs font-medium text-gray-800 mb-2 video-title h-8">{{ video.title }}</h3>
+                        <div class="flex gap-2">
+                            <a href="{{ video.url }}" target="_blank" 
+                                class="flex-1 text-center text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition-colors duration-300">
+                                Watch
+                            </a>
+                            <div class="relative download-btn">
+                                <form action="{{ url_for('download_video', video_id=video.video_id) }}" method="POST" class="inline">
+                                    <button type="submit" 
+                                        class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors duration-300"
+                                        onclick="startDownload(this)">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </form>
+                                <div class="download-tooltip">
+                                    <p class="text-xs mb-2">Click to download or use youtube-dl:</p>
+                                    <code class="text-xs bg-gray-100 p-1 rounded block mb-2">{{ video.download_link }}</code>
+                                    <a href="https://youtube-dl.org/" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800">Get youtube-dl</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if trending_videos %}
+        <!-- Trending Videos Section -->
+        <section class="mt-8 fade-in">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-fire text-orange-500 mr-2"></i>
+                Trending Videos
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {% for video in trending_videos %}
+                <div class="bg-white rounded-lg shadow-md overflow-hidden card-hover">
+                    <div class="relative">
+                        <img src="{{ video.thumbnail }}" alt="{{ video.title }}" 
+                            class="w-full h-32 object-cover">
+                        <div class="absolute top-1 right-1 bg-black bg-opacity-50 text-white px-1.5 py-0.5 rounded text-xs">
+                            <i class="fas fa-thumbs-up text-xs mr-1"></i>
+                            {{ video.like_count }}
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <h3 class="text-sm font-medium text-gray-800 mb-2 video-title">{{ video.title }}</h3>
+                        <div class="flex gap-2">
+                            <a href="{{ video.url }}" target="_blank" 
+                                class="flex-1 text-center text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 transition-colors duration-300">
+                                Watch
+                            </a>
+                            <div class="relative download-btn">
+                                <form action="{{ url_for('download_video', video_id=video.video_id) }}" method="POST" class="inline">
+                                    <button type="submit" 
+                                        class="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors duration-300"
+                                        onclick="startDownload(this)">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </form>
+                                <div class="download-tooltip">
+                                    <p class="text-xs mb-2">Click to download or use youtube-dl:</p>
+                                    <code class="text-xs bg-gray-100 p-1 rounded block mb-2">{{ video.download_link }}</code>
+                                    <a href="https://youtube-dl.org/" target="_blank" class="text-xs text-indigo-600 hover:text-indigo-800">Get youtube-dl</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+    </div>
+
+    <script>
+        // Loader handling
+        window.addEventListener('load', function() {
+            const loader = document.getElementById('loader');
+            setTimeout(function() {
+                loader.classList.add('loader-hidden');
+            }, 1000);
+        });
+
+        // Download button handling
+        function startDownload(button) {
+            // Disable the button and show loading state
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Submit the form
+            button.closest('form').submit();
+            
+            // Re-enable the button after 2 seconds
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-download"></i>';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
